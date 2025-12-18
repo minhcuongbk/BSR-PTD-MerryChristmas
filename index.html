@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Christmas Card</title>
+  <style>
+    :root{
+      --radius: 18px;
+      --ease: cubic-bezier(.2,.95,.15,1);
+      --shadow: 0 22px 80px rgba(0,0,0,.45);
+      --ui: rgba(255,255,255,.14);
+      --ui2: rgba(255,255,255,.10);
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      overflow:hidden;
+      background: radial-gradient(1200px 700px at 50% 18%, #2b2b2b, #070707);
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    /* Snow */
+    #snow{
+      position:fixed;
+      inset:0;
+      width:100%;
+      height:100%;
+      pointer-events:none;
+      z-index: 9999;
+    }
+
+    /* Fullscreen stage */
+    .stage{
+      position:fixed;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      perspective: 1400px;
+      transform-style: preserve-3d;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    /* Card scaling */
+    .cardArea{
+      width: min(94vw, 980px);
+      height: min(88vh, 720px);
+      position:relative;
+      transform-style: preserve-3d;
+      border-radius: var(--radius);
+      filter: drop-shadow(var(--shadow));
+    }
+
+    .layer{
+      position:absolute;
+      inset:0;
+      border-radius: var(--radius);
+      overflow:hidden;
+      transform-style: preserve-3d;
+      will-change: transform, opacity, filter;
+    }
+    .img{
+      position:absolute;
+      inset:0;
+      background-position:center;
+      background-size:cover;
+      border-radius: var(--radius);
+    }
+    .img.cover{ background-image:url("cover.png"); }
+    .img.content{ background-image:url("content.png"); }
+
+    /* Content */
+    .contentLayer{
+      opacity:0;
+      transform: translateZ(2px) scale(.98);
+      filter: blur(2px);
+      transition:
+        transform 900ms var(--ease),
+        opacity 700ms ease,
+        filter 700ms ease;
+      cursor:pointer;
+    }
+    .open .contentLayer{
+      opacity:1;
+      transform: translateZ(2px) scale(1);
+      filter: blur(0px);
+    }
+
+    /* Cover spins away */
+    .coverLayer{
+      opacity:1;
+      transform: rotateY(0deg) scale(1);
+      filter: blur(0px);
+      backface-visibility:hidden;
+      transition:
+        transform 1150ms var(--ease),
+        opacity 650ms ease,
+        filter 650ms ease;
+      cursor:pointer;
+      z-index:2;
+    }
+    .open .coverLayer{
+      transform: rotateY(360deg) scale(.92);
+      opacity:0;
+      filter: blur(2px);
+      pointer-events:none;
+    }
+
+    .coverLayer::after{
+      content:"";
+      position:absolute; inset:0;
+      background: linear-gradient(120deg, rgba(255,255,255,.12), rgba(255,255,255,0) 45%);
+      mix-blend-mode: screen;
+      pointer-events:none;
+      opacity:.75;
+    }
+
+    /* Speaker button (top-right) */
+    .speaker{
+      position:fixed;
+      top: calc(env(safe-area-inset-top) + 12px);
+      right: calc(env(safe-area-inset-right) + 12px);
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      border: 0;
+      background: var(--ui);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      z-index:10;
+    }
+    .speaker:active{ transform: translateY(1px); }
+
+    .speaker svg{
+      width: 22px;
+      height: 22px;
+      opacity: .92;
+      fill: white;
+    }
+
+    /* little badge dot when muted */
+    .speaker.muted::after{
+      content:"";
+      position:absolute;
+      width:10px;
+      height:10px;
+      border-radius:99px;
+      background:#ff4d4d;
+      top:9px;
+      right:9px;
+      box-shadow: 0 0 0 2px rgba(0,0,0,.25);
+    }
+
+    /* iOS: avoid weird rubber-band highlighting */
+    button{ -webkit-touch-callout:none; }
+
+    @media (max-width:520px){
+      .cardArea{ height: min(86vh, 660px); }
+    }
+    .tap-hint{
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom) + 18px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  font-size: 14px;
+  letter-spacing: .3px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 20;
+  opacity: .85;
+  animation: hintPulse 1.6s ease-in-out infinite;
+  pointer-events: none; /* không chặn tap */
+}
+
+@keyframes hintPulse{
+  0%,100%{ opacity:.55; transform:translateX(-50%) scale(1); }
+  50%{ opacity:.9; transform:translateX(-50%) scale(1.04); }
+}
+
+  </style>
+</head>
+<div class="tap-hint" id="tapHint">Tap to open card</div>
+<body>
+  <canvas id="snow" aria-hidden="true"></canvas>
+
+  <!-- Speaker icon -->
+  <button class="speaker muted" id="speakerBtn" aria-label="Bật/Tắt nhạc">
+    <!-- volume icon -->
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 10v4a2 2 0 0 0 2 2h3l5 4a1 1 0 0 0 1.62-.78V4.78A1 1 0 0 0 13 4l-5 4H5a2 2 0 0 0-2 2zm16.5 2a4.5 4.5 0 0 0-2.19-3.86.75.75 0 1 0-.77 1.29A3 3 0 0 1 18 12a3 3 0 0 1-1.46 2.57.75.75 0 1 0 .77 1.29A4.5 4.5 0 0 0 19.5 12z"/>
+    </svg>
+  </button>
+
+  <div class="stage" id="stage">
+    <div class="cardArea" id="cardArea" aria-label="Christmas card">
+      <div class="layer contentLayer" id="contentLayer">
+        <div class="img content" aria-hidden="true"></div>
+      </div>
+      <div class="layer coverLayer" id="coverLayer" tabindex="0">
+        <div class="img cover" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+
+  <audio id="bgm" loop preload="auto">
+    <source src="music.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    (() => {
+      // -------- Fullscreen helper (mobile) --------
+      function canFullscreen() {
+        return !!document.documentElement.requestFullscreen;
+      }
+      async function requestFsOnce() {
+        // Only attempt on user gesture; ignore errors quietly
+        if (!canFullscreen()) return;
+        if (document.fullscreenElement) return;
+        try { await document.documentElement.requestFullscreen({ navigationUI: "hide" }); } catch(_) {}
+      }
+
+      // -------- Card open/close --------
+      const cardArea = document.getElementById('cardArea');
+      let isOpen = false;
+      function setOpen(v){
+        isOpen = v;
+        cardArea.classList.toggle('open', isOpen);
+      }
+      function toggle(){ setOpen(!isOpen); 
+        if(isOpen){
+    document.getElementById('tapHint').style.display = 'none';
+  }
+      }
+
+      // First interaction: try fullscreen + unlock audio possibility
+      let interacted = false;
+      function onFirstInteract() {
+        if (interacted) return;
+        interacted = true;
+        requestFsOnce();
+        // Schedule auto music 2s after first interaction
+        setTimeout(() => { autoPlayAfter2s(); }, 2000);
+      }
+
+      cardArea.addEventListener('click', () => { onFirstInteract(); toggle(); });
+
+      // keyboard accessibility (optional)
+      cardArea.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onFirstInteract(); toggle(); }
+      });
+
+      // -------- Music with speaker icon --------
+      const bgm = document.getElementById('bgm');
+      const speakerBtn = document.getElementById('speakerBtn');
+      let musicOn = false;
+
+      async function tryPlay(){
+        try {
+          await bgm.play();
+          return true;
+        } catch(_) {
+          return false;
+        }
+      }
+      function stop(){
+        bgm.pause();
+      }
+      function renderSpeaker(){
+        speakerBtn.classList.toggle('muted', !musicOn);
+      }
+
+      async function setMusic(on){
+        musicOn = on;
+        renderSpeaker();
+        if(musicOn){
+          const ok = await tryPlay();
+          if(!ok){
+            // If blocked, stay "on" but will start on next user click
+            // We'll retry on next click automatically (below).
+          }
+        }else{
+          stop();
+        }
+      }
+
+      speakerBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        onFirstInteract();
+        await setMusic(!musicOn);
+      });
+
+      // Retry play on any later gesture if user wants music
+      cardArea.addEventListener('click', async () => {
+        if(musicOn) await tryPlay();
+      });
+
+      // Auto play after 2 seconds (works only if already unlocked by interaction)
+      async function autoPlayAfter2s(){
+        if(!musicOn){
+          // Turn on and attempt play (user asked “nhạc tự phát”)
+          await setMusic(true);
+        } else {
+          await tryPlay();
+        }
+      }
+
+      // Start in muted state (user will see icon; auto-play will turn it on after first tap + 2s)
+      renderSpeaker();
+
+      // -------- Snow: slow + full screen --------
+      const canvas = document.getElementById('snow');
+      const ctx = canvas.getContext('2d');
+
+      let w=0, h=0, dpr=1;
+      function resize(){
+        dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        w = Math.floor(window.innerWidth);
+        h = Math.floor(window.innerHeight);
+        canvas.width = Math.floor(w * dpr);
+        canvas.height = Math.floor(h * dpr);
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+        ctx.setTransform(dpr,0,0,dpr,0,0);
+      }
+      window.addEventListener('resize', resize, {passive:true});
+      resize();
+
+      function rand(min,max){ return Math.random()*(max-min)+min; }
+      let flakes = [];
+      function resetFlakes(){
+        const N = Math.max(220, Math.min(700, Math.round((w*h)/8500)));
+        flakes = Array.from({length:N}, () => ({
+          x: rand(0,w),
+          y: rand(-h,h),
+          r: rand(0.9, 3.0),
+          vy: rand(0.10, 0.45),     // slower
+          vx: rand(-0.10, 0.10),
+          drift: rand(0, Math.PI*2),
+          spin: rand(0.0012, 0.0042)
+        }));
+      }
+      resetFlakes();
+
+      let last = performance.now();
+      function tick(now){
+        const dt = Math.min(40, now-last);
+        last = now;
+
+        ctx.clearRect(0,0,w,h);
+
+        ctx.beginPath();
+        for(const f of flakes){
+          f.drift += f.spin * dt;
+          f.x += (f.vx + Math.sin(f.drift)*0.05) * dt;
+          f.y += f.vy * dt;
+
+          if(f.y > h + 10){ f.y = -10; f.x = rand(0,w); }
+          if(f.x < -10) f.x = w + 10;
+          if(f.x > w + 10) f.x = -10;
+
+          ctx.moveTo(f.x, f.y);
+          ctx.arc(f.x, f.y, f.r, 0, Math.PI*2);
+        }
+        ctx.fillStyle = 'rgba(255,255,255,0.90)';
+        ctx.fill();
+
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+
+      let t=null;
+      window.addEventListener('resize', () => {
+        clearTimeout(t);
+        t=setTimeout(() => { resize(); resetFlakes(); }, 120);
+      }, {passive:true});
+    })();
+  </script>
+</body>
+</html>
