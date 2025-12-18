@@ -24,7 +24,7 @@ body{
   touch-action: manipulation;
 }
 
-/* SNOW */
+/* SNOW (PHỦ ẢNH) */
 #snow{
   position:fixed;
   inset:0;
@@ -48,11 +48,14 @@ body{
     env(safe-area-inset-left);
 }
 
-/* CARD AUTO-FIT */
+/* CARD – AUTO RESIZE MOBILE */
 .card{
   width: min(96vw, 900px);
   aspect-ratio: 3 / 4;
-  max-height: 88vh;
+
+  /* QUAN TRỌNG */
+  max-height: 88dvh;     /* dynamic viewport height */
+
   position:relative;
   transform-style:preserve-3d;
   filter: drop-shadow(var(--shadow));
@@ -223,6 +226,15 @@ body{
 
 <script>
 (() => {
+  /* FORCE RESIZE (iOS SAFE) */
+  const card = document.getElementById("card");
+  function forceResize(){
+    card.style.maxHeight = (window.innerHeight * 0.88) + "px";
+  }
+  window.addEventListener("resize", forceResize);
+  window.addEventListener("orientationchange", forceResize);
+  forceResize();
+
   /* FULLSCREEN */
   function requestFS(){
     if(document.documentElement.requestFullscreen && !document.fullscreenElement){
@@ -230,25 +242,20 @@ body{
     }
   }
 
-  /* CARD */
-  const card = document.getElementById("card");
+  /* CARD OPEN */
   const tapHint = document.getElementById("tapHint");
   let open = false;
-
-  function toggle(){
-    open = !open;
-    card.classList.toggle("open", open);
-    if(open) tapHint.style.display="none";
-  }
-
   let interacted = false;
+
   card.addEventListener("click", () => {
     if(!interacted){
       interacted = true;
       requestFS();
       setTimeout(autoPlayMusic, 2000);
     }
-    toggle();
+    open = !open;
+    card.classList.toggle("open", open);
+    if(open) tapHint.style.display="none";
     if(musicOn) tryPlay();
   });
 
@@ -281,12 +288,12 @@ body{
   const canvas = document.getElementById("snow");
   const ctx = canvas.getContext("2d");
 
-  function resize(){
+  function resizeSnow(){
     canvas.width = innerWidth;
     canvas.height = innerHeight;
   }
-  resize();
-  addEventListener("resize", resize);
+  resizeSnow();
+  addEventListener("resize", resizeSnow);
 
   const flakes = Array.from({length:300}, () => ({
     x: Math.random()*innerWidth,
