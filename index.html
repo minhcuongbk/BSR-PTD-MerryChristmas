@@ -24,7 +24,7 @@ body{
   touch-action: manipulation;
 }
 
-/* SNOW (PHỦ ẢNH) */
+/* SNOW – PHỦ ẢNH */
 #snow{
   position:fixed;
   inset:0;
@@ -52,9 +52,7 @@ body{
 .card{
   width: min(96vw, 900px);
   aspect-ratio: 3 / 4;
-
-  /* QUAN TRỌNG */
-  max-height: 88dvh;     /* dynamic viewport height */
+  max-height: 88dvh; /* dynamic viewport */
 
   position:relative;
   transform-style:preserve-3d;
@@ -226,7 +224,7 @@ body{
 
 <script>
 (() => {
-  /* FORCE RESIZE (iOS SAFE) */
+  /* FORCE RESIZE – MOBILE SAFE */
   const card = document.getElementById("card");
   function forceResize(){
     card.style.maxHeight = (window.innerHeight * 0.88) + "px";
@@ -234,13 +232,6 @@ body{
   window.addEventListener("resize", forceResize);
   window.addEventListener("orientationchange", forceResize);
   forceResize();
-
-  /* FULLSCREEN */
-  function requestFS(){
-    if(document.documentElement.requestFullscreen && !document.fullscreenElement){
-      document.documentElement.requestFullscreen({navigationUI:"hide"}).catch(()=>{});
-    }
-  }
 
   /* CARD OPEN */
   const tapHint = document.getElementById("tapHint");
@@ -250,7 +241,6 @@ body{
   card.addEventListener("click", () => {
     if(!interacted){
       interacted = true;
-      requestFS();
       setTimeout(autoPlayMusic, 2000);
     }
     open = !open;
