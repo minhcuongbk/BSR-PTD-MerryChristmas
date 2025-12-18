@@ -80,8 +80,10 @@ body{
 .bg{
   position:absolute;
   inset:0;
-  background-size:cover;
-  background-position:center;
+  background-size: contain;      /* ✅ không cắt chữ */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #000;
 }
 
 /* IMAGES */
@@ -314,3 +316,4 @@ body{
 
 </body>
 </html>
+
